@@ -64,28 +64,57 @@ export class VpnService {
   }
 
   async connectToVpn(vpn: Vpn): Promise<string> {
+  let command = '';
+  
+  if (vpn.url.endsWith('.ovpn')) {
     const openvpnPath = 'C:\\Program Files\\OpenVPN\\bin\\openvpn.exe';
     const configFile = vpn.url;
     const credentialsFile = 'C:\\Users\\Ayedi\\Downloads\\credentials.txt';
 
-    // Create a temporary file with the credentials
     fs.writeFileSync(credentialsFile, `${vpn.description}\n${vpn.pwd}`);
 
-    const command = `"${openvpnPath}" --config "${configFile}" --auth-user-pass "${credentialsFile}"`;
+    command = `"${openvpnPath}" --config "${configFile}" --auth-user-pass "${credentialsFile}"`;
+  } else if (vpn.url.includes('fortinet')) {
+    const fortiClientCliPath = 'C:\\Program Files\\Fortinet\\FortiClient\\forticlient.exe';
+  command = `"${fortiClientCliPath}" connect --server "${vpn.address}:${vpn.port}" --username "${vpn.description}" --password "${vpn.pwd}"`;
+ } else {
+    throw new InternalServerErrorException('Unsupported VPN type');
+  }
 
-    console.log(`Executing command: ${command}`);
-    console.log(`VPN Description: ${vpn.description}`);
-    console.log(`VPN Password: ${vpn.pwd}`);
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout, stderr) => {
+      const exitCode = error?.code; // Capture the exit code
+      if (exitCode) {
+        console.error('VPN connection failed.');
+        console.error(`Exit code: ${exitCode}`);
+        console.error(`Error message: ${error.message}`);
+        console.error(`stderr: ${stderr}`);
+        reject(new InternalServerErrorException(`Failed to connect to VPN: ${stderr || error.message}`));
+      } else {
+        console.log('VPN connected successfully.');
+        resolve(stdout);
+      }
+    });
+  });
+}
+
+  
+  async disconnectVpn(): Promise<string> {
+    let command = '';
+
+    // This assumes you are disconnecting from OpenVPN
+    const openvpnDisconnectCommand = 'taskkill /IM openvpn.exe /F'; // Command to disconnect OpenVPN
+    command = openvpnDisconnectCommand;
 
     return new Promise((resolve, reject) => {
       exec(command, (error, stdout, stderr) => {
         if (error) {
-          console.error('Error executing command.');
+          console.error('Error disconnecting VPN.');
           console.error(`Error message: ${error.message}`);
           console.error(`stderr: ${stderr}`);
-          reject(new InternalServerErrorException(`Failed to connect to VPN: ${stderr || error.message}`));
+          reject(new InternalServerErrorException(`Failed to disconnect VPN: ${stderr || error.message}`));
         } else {
-          console.log('VPN connected successfully.');
+          console.log('VPN disconnected successfully.');
           resolve(stdout);
         }
       });

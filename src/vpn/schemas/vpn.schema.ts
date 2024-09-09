@@ -27,6 +27,7 @@ export class Vpn {
 
   @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Client' }])
   clients: Types.ObjectId[];  // Change type to ObjectId[]
+  
 }
 
 export const VpnSchema = SchemaFactory.createForClass(Vpn);

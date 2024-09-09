@@ -114,6 +114,19 @@ export class VpnController {
       console.error('Error connecting to VPN:', error.message);
       throw new HttpException(`Error connecting to VPN: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+ 
+  }
+  @Post('disconnect')
+  @ApiOperation({ summary: 'Disconnect from the VPN' })
+  @ApiResponse({ status: 200, description: 'VPN disconnected successfully.' })
+  async disconnectVpn(): Promise<string> {
+    try {
+      const disconnectResult = await this.vpnService.disconnectVpn();
+      return disconnectResult;
+    } catch (error) {
+      console.error('Error disconnecting VPN:', error.message);
+      throw new HttpException(`Error disconnecting VPN: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }
 
