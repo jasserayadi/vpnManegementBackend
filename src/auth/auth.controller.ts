@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Request, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Request, UseGuards, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { BlacklistService } from './BlacklistService';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -17,7 +18,7 @@ export class JwtAuthGuard implements CanActivate {
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService,private readonly blacklistService: BlacklistService,) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
@@ -41,5 +42,23 @@ export class AuthController {
     return { message: 'Invalid credentials', statusCode: 401 };
   }
 
- 
+ // @UseGuards(JwtAuthGuard)
+
+ @Post('logout')
+ async logout(@Body() body: { token: string }) {
+   if (!body.token) {
+     throw new BadRequestException('Token is required');
+   }
+   
+   try {
+     console.log('Received logout request with token:', body.token);
+     await this.authService.logout(body.token);
+     console.log('Logout successful');
+     return { message: 'Successfully logged out' };
+   } catch (error) {
+     console.error('Error during logout:', error);
+     throw new InternalServerErrorException('Failed to logout');
+   }
+ }
+
 }

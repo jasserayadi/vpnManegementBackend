@@ -4,13 +4,17 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { User } from './schemas/user.schema';
+import { BlacklistService } from './BlacklistService';
+import { BlacklistedToken } from './schemas/BlacklistedToken';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private jwtService: JwtService,
+    private blacklistService: BlacklistService,@InjectModel('BlacklistedToken') private blacklistModel: Model<BlacklistedToken> // Ensure this exists and is injected
   ) {}
+  
   async register(username: string, email: string, password: string, confirmPassword: string, role: string): Promise<User> {
     console.log('Registering user with:');
     console.log('Username:', username);
@@ -61,4 +65,16 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
     };
   }
-}
+  async logout(token: string): Promise<void> {
+    try {
+      if (!token) {
+        throw new Error('Token is required');
+      }
+      
+      // Blacklist the token
+      await new this.blacklistModel({ token, expiresAt: new Date() }).save();
+    } catch (error) {
+      console.error('Error blacklisting token:', error);
+      throw new InternalServerErrorException('Failed to logout');
+    }
+}}
